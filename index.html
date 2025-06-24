@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英単語学習アプリ v4.4</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap');
+
+        :root {
+            --primary-color: #007bff;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --secondary-color: #6c757d;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --bg-color: #f4f7f6;
+            --border-color: #dee2e6;
+        }
+
+        body {
+            font-family: 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--dark-color);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        body.explosion {
+            animation: shake-hard 0.8s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: #fff;
+            padding: 20px 30px 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            margin-top: 60px;
+            position: relative;
+            transition: transform 0.5s;
+        }
+        
+        #home-button {
+            position: absolute;
+            top: -50px;
+            left: 0;
+            padding: 10px 20px;
+            background-color: #fff;
+            color: var(--dark-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+        #home-button:hover { background-color: var(--light-color); transform: translateY(-2px); }
+
+        #reset-button {
+            position: absolute;
+            top: -50px;
+            right: 0;
+            width: 45px;
+            height: 45px;
+            background-color: var(--danger-color);
+            color: white;
+            border: 1px solid var(--danger-color);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.5em;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #reset-button:hover { background-color: #c82333; transform: translateY(-2px); }
+        #reset-button:active { transform: scale(0.9); }
+
+        /* 中略: 他のスタイルは変更なし... */
+        h1, h2, h3 { text-align: center; }
+        h1 { color: var(--dark-color); margin: 10px 0 20px; }
+        h2 { color: var(--primary-color); margin-bottom: 20px; }
+        .content { display: none; }
+        .content.active { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .home-buttons .answer-button { margin-bottom: 15px; }
+        #start-review-quiz-btn { background-color: var(--danger-color); border-color: var(--danger-color); color: white; }
+        #start-review-quiz-btn:hover:not(:disabled) { background-color: #c82333; border-color: #bd2130; }
+        #start-review-quiz-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .view-toggle { text-align: center; margin-bottom: 20px; }
+        .view-btn { padding: 8px 16px; border: 1px solid var(--border-color); background: white; cursor: pointer; border-radius: 5px; font-size: 0.9em; }
+        .view-btn.active { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
+        .view { display: none; }
+        .view.active { display: block; }
+        .word-cards-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; padding: 10px 0; }
+        .word-card { height: 100px; background-color: transparent; cursor: pointer; perspective: 1000px; }
+        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 10px; }
+        .word-card.flipped .card-inner { transform: rotateY(180deg); }
+        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 1.1em; font-weight: bold; padding: 5px; box-sizing: border-box; text-align: center; }
+        .card-front { background-color: white; border: 1px solid var(--border-color); color: var(--dark-color); }
+        .card-back { background-color: var(--primary-color); color: white; transform: rotateY(180deg); }
+        #word-list-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        #word-list-table th, #word-list-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        #word-list-table th { background-color: var(--light-color); }
+        #quiz-settings-form { text-align: center; padding: 20px 0; }
+        #quiz-settings-form > div { margin-bottom: 20px; }
+        #quiz-settings-form label { font-size: 1.1em; margin-right: 10px; }
+        #num-questions { padding: 8px; border: 1px solid #ccc; border-radius: 5px; width: 80px; font-size: 1em; }
+        .mode-switch-container { display: flex; justify-content: center; align-items: center; margin-bottom: 25px; }
+        .mode-label { font-size: 1em; font-weight: bold; }
+        .switch { position: relative; display: inline-block; width: 60px; height: 34px; margin: 0 15px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; }
+        input:checked + .slider { background-color: var(--primary-color); }
+        input:focus + .slider { box-shadow: 0 0 1px var(--primary-color); }
+        input:checked + .slider:before { transform: translateX(26px); }
+        .slider.round { border-radius: 34px; }
+        .slider.round:before { border-radius: 50%; }
+        #start-quiz-button { padding: 10px 25px; background-color: var(--success-color); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1em; transition: all 0.2s ease; }
+        #start-quiz-button:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(40, 167, 69, 0.4); }
+        #quiz-container { text-align: center; position: relative; min-height: 350px; }
+        .question-area { transition: opacity 0.3s ease-out; }
+        #question-word { font-size: clamp(2.5rem, 8vw, 4rem); margin-bottom: 20px; font-weight: 700; }
+        .answer-buttons { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 20px; }
+        .answer-button { padding: 18px; font-size: 1.3em; font-weight: bold; background-color: #fff; border: 2px solid var(--border-color); border-radius: 12px; cursor: pointer; transition: all 0.2s ease; }
+        .answer-button:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
+        .answer-button:disabled { cursor: not-allowed; opacity: 0.8; }
+        .correct-answer { border-color: var(--success-color) !important; background-color: #e8f5e9 !important; transform: scale(1.05); }
+        .wrong-answer { border-color: var(--danger-color) !important; background-color: #ffebee !important; animation: shake 0.5s; }
+        @keyframes shake { 10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(2px); } 30%, 50%, 70% { transform: translateX(-4px); } 40%, 60% { transform: translateX(4px); } }
+        #explanation { margin-top: 15px; padding: 15px; border-radius: 8px; font-size: 1.05em; min-height: 50px; opacity: 0; transition: opacity 0.4s; }
+        #explanation.show { opacity: 1; }
+        #explanation.correct { background-color: #e8f5e9; color: #1c5c20; }
+        #explanation.incorrect { background-color: #ffebee; color: #b71c1c; }
+        #quiz-finished { padding: 20px 0; }
+        #final-score { font-size: 1.5em; font-weight: bold; }
+        #mistakes-list { margin-top: 25px; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--light-color); }
+        #mistakes-list h3 { color: var(--danger-color); margin-top: 0; }
+        #mistakes-list ul { list-style-type: none; padding: 0; }
+        #mistakes-list li { padding: 8px; font-size: 1.1em; border-bottom: 1px solid #eee; }
+        #mistakes-list li:last-child { border-bottom: none; }
+        .result-buttons { margin-top: 25px; text-align: center; }
+        .result-buttons button { background: var(--primary-color); color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-size: 1em; margin: 5px; transition: all 0.2s ease; }
+        .result-buttons button:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #start-mistake-quiz-btn { background-color: var(--danger-color); }
+
+        /* 爆発エフェクト & モーダル */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        @keyframes shake-hard {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.show { display: flex; opacity: 1; }
+        .modal-content {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transform: scale(0.7);
+            transition: transform 0.3s ease;
+        }
+        .modal-overlay.show .modal-content { transform: scale(1); }
+        .modal-content p { font-size: 1.2em; margin: 0 0 20px; font-weight: bold; }
+        .modal-content button {
+            padding: 10px 30px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <button id="home-button" onclick="showHome()">ホーム</button>
+        <button id="reset-button" title="押すなよ？">💣</button>
+        
+        <div id="main-content">
+            <h1>英単語学習</h1>
+            <div id="home" class="content active">
+                <h2>学習メニュー</h2>
+                <div class="home-buttons">
+                    <button class="answer-button" onclick="showContent('wordbook')">単語帳を見る</button>
+                    <button class="answer-button" onclick="showContent('quiz-settings')">テストを始める</button>
+                    <button class="answer-button" id="start-review-quiz-btn" onclick="startReviewQuizFromHome()">復習テストを開始</button>
+                </div>
+            </div>
+            <div id="wordbook" class="content">
+                 <h2>単語帳</h2>
+                <div class="view-toggle">
+                    <button id="card-view-btn" class="view-btn active">カード</button>
+                    <button id="list-view-btn" class="view-btn">一覧</button>
+                </div>
+                <div id="card-view" class="view active">
+                    <div class="word-cards-container"></div>
+                </div>
+                <div id="list-view" class="view">
+                    <table id="word-list-table">
+                        <thead><tr><th>英単語</th><th>用法</th><th>主な意味</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="quiz-settings" class="content">
+                <h2>テスト設定</h2>
+                <div id="quiz-settings-form">
+                    <div class="mode-switch-container">
+                        <span class="mode-label">ランダム</span>
+                        <label class="switch">
+                            <input type="checkbox" id="balance-mode-toggle">
+                            <span class="slider round"></span>
+                        </label>
+                        <span class="mode-label">バランス</span>
+                    </div>
+                    <div>
+                        <label for="num-questions">出題数:</label>
+                        <input type="number" id="num-questions" value="10" min="1" max="23">
+                    </div>
+                    <div>
+                        <button id="start-quiz-button">開始</button>
+                    </div>
+                </div>
+            </div>
+            <div id="quiz-area" class="content">
+                <div id="quiz-container"></div>
+            </div>
+            <div id="quiz-finished" class="content">
+                <h2 id="result-title">テスト完了！</h2>
+                <p id="final-score"></p>
+                <div id="mistakes-list" style="display: none;">
+                    <h3>間違えた問題</h3>
+                    <ul id="mistakes"></ul>
+                </div>
+                <div class="result-buttons">
+                    <button id="start-mistake-quiz-btn" style="display: none;" onclick="startMistakeQuiz()">間違えた問題だけ復習</button>
+                    <button onclick="showContent('quiz-settings')">もう一度テストする</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="unsupported-modal" class="modal-overlay">
+        <div class="modal-content">
+            <p>この機能はiPhoneのせいで使えません。</p>
+            <button id="close-modal-btn">OK</button>
+        </div>
+    </div>
+
+    <script>
+        // wordData と大半のJSは変更なし...
+        const wordData = [
+            { id: 1, word: 'agree', usage: 'to do', meaning: '同意する', explanation: '「これから～すること」に同意するという未来志向の動詞です。' },
+            { id: 2, word: 'decide', usage: 'to do', meaning: '決心する', explanation: '「これから～する」と未来の行動を決めるため、to不定詞をとります。' },
+            { id: 3, word: 'expect', usage: 'to do', meaning: '予期する', explanation: '「これから～だろう」と未来を予期するため、to不定詞が合います。' },
+            { id: 4, word: 'want', usage: 'to do', meaning: '欲する', explanation: '「これから～したい」という未来への願望を表す代表的な動詞です。' },
+            { id: 5, word: 'wish', usage: 'to do', meaning: '願う', explanation: '「～できたらなあ」という未来への願いを表します。' },
+            { id: 6, word: 'hope', usage: 'to do', meaning: '希望する', explanation: '「～になること」を望む、未来への希望を表します。' },
+            { id: 7, word: 'promise', usage: 'to do', meaning: '約束する', explanation: '「これから～する」と未来の行動を約束します。' },
+            { id: 8, word: 'plan', usage: 'to do', meaning: '計画する', explanation: '「これから～する」ための計画を立てる動詞です。' },
+            { id: 9, word: 'offer', usage: 'to do', meaning: '申し出る', explanation: '「（私が）～しましょう」と未来の行動を申し出ます。' },
+            { id: 10, word: 'mean', usage: 'to do', meaning: '意図する', explanation: '「～するつもり」という未来の意図を表します。' },
+            { id: 11, word: 'refuse', usage: 'to do', meaning: '拒否する', explanation: '「これから～すること」を拒否するという意志を表します。' },
+            { id: 12, word: 'manage', usage: 'to do', meaning: 'なんとかやり遂げる', explanation: '困難な状況で「～すること」をなんとか成し遂げる、という達成を表します。' },
+            { id: 13, word: 'admit', usage: '~ing', meaning: '認める', explanation: '「（過去に）～したこと」を認める、という経験や事実に関する動詞です。' },
+            { id: 14, word: 'deny', usage: '~ing', meaning: '否定する', explanation: '「（過去に）～したこと」を否定する、という経験や事実に関する動詞です。' },
+            { id: 15, word: 'consider', usage: '~ing', meaning: '熟考する', explanation: '「～すること」を頭の中でじっくり考える、思考活動を表します。' },
+            { id: 16, word: 'imagine', usage: '~ing', meaning: '想像する', explanation: '「～している場面」を心に思い描く、イメージの動詞です。' },
+            { id: 17, word: 'enjoy', usage: '~ing', meaning: '楽しむ', explanation: '「～していること」という行為そのものを楽しむ、経験の動詞です。' },
+            { id: 18, word: 'finish', usage: '~ing', meaning: '終える', explanation: '「～していたこと」を終える、継続していた行為の完了を表します。' },
+            { id: 19, word: 'give up', usage: '~ing', meaning: 'あきらめる', explanation: '「～すること」をやめる、継続していた行為の中断を表します。' },
+            { id: 20, word: 'avoid', usage: '~ing', meaning: '避ける', explanation: '「～すること」という行為を避ける、反復的なニュアンスも持ちます。' },
+            { id: 21, word: 'mind', usage: '~ing', meaning: '気にする、嫌がる', explanation: '「～すること」を嫌がる、という感情を表します。(Do you mind ~ing?)' },
+            { id: 22, word: 'practice', usage: '~ing', meaning: '練習する', explanation: '「～すること」を繰り返し練習する、反復行為を表します。' },
+            { id: 23, word: 'suggest', usage: '~ing', meaning: '提案する', explanation: '「～してはどうか」とある行為を提案します。' }
+        ];
+
+        let currentQuiz = [], currentQuestionIndex = 0, incorrectQuestions = [], savedMistakes = [];
+        let isQuizActive = false, isPracticeMode = false;
+        let answerTimer;
+
+        const allContent = document.querySelectorAll('.content');
+        const startQuizButton = document.getElementById('start-quiz-button');
+        const numQuestionsInput = document.getElementById('num-questions');
+        const cardViewBtn = document.getElementById('card-view-btn');
+        const listViewBtn = document.getElementById('list-view-btn');
+        const reviewBtnHome = document.getElementById('start-review-quiz-btn');
+        const resetButton = document.getElementById('reset-button');
+        const unsupportedModal = document.getElementById('unsupported-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+
+
+        window.onload = () => {
+            // イベントリスナー設定
+            startQuizButton.addEventListener('click', () => { isPracticeMode = false; startQuiz(wordData); });
+            cardViewBtn.addEventListener('click', () => toggleWordbookView(true));
+            listViewBtn.addEventListener('click', () => toggleWordbookView(false));
+            resetButton.addEventListener('click', triggerExplosionEffect);
+            closeModalBtn.addEventListener('click', () => unsupportedModal.classList.remove('show'));
+            
+            // 初期化処理
+            loadMistakes();
+            updateHomePage();
+            generateWordCards();
+            generateWordListTable();
+            showHome();
+        };
+        
+        // ★★リセットボタンの新機能★★
+        function triggerExplosionEffect() {
+            const button = resetButton;
+            const rect = button.getBoundingClientRect();
+            
+            document.body.classList.add('explosion');
+            
+            for (let i = 0; i < 50; i++) {
+                createParticle(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            }
+
+            setTimeout(() => {
+                document.body.classList.remove('explosion');
+                unsupportedModal.classList.add('show');
+            }, 1000);
+        }
+
+        function createParticle(x, y) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            document.body.appendChild(particle);
+
+            const size = Math.floor(Math.random() * 15 + 5);
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            particle.style.background = `hsl(${Math.random() * 60}, 100%, 50%)`;
+            
+            const destinationX = x + (Math.random() - 0.5) * 2 * (window.innerWidth / 3);
+            const destinationY = y + (Math.random() - 0.5) * 2 * (window.innerHeight / 3);
+
+            particle.style.left = `${x - size / 2}px`;
+            particle.style.top = `${y - size / 2}px`;
+
+            const animation = particle.animate([
+                { transform: 'translate(0, 0)', opacity: 1 },
+                { transform: `translate(${destinationX - x}px, ${destinationY - y}px)`, opacity: 0 }
+            ], {
+                duration: Math.random() * 1000 + 800,
+                easing: 'cubic-bezier(0, .9, .57, 1)',
+            });
+            
+            animation.onfinish = () => {
+                particle.remove();
+            };
+        }
+
+
+        function loadMistakes() { savedMistakes = JSON.parse(localStorage.getItem('savedMistakes_v4.4')) || []; }
+        function saveMistakes() { localStorage.setItem('savedMistakes_v4.4', JSON.stringify(savedMistakes)); }
+        
+        function updateHomePage() {
+            reviewBtnHome.disabled = savedMistakes.length === 0;
+            reviewBtnHome.textContent = `復習テストを開始 (${savedMistakes.length}問)`;
+        }
+
+        function showContent(contentId) {
+            clearTimeout(answerTimer);
+            allContent.forEach(content => content.classList.remove('active'));
+            document.getElementById(contentId).classList.add('active');
+        }
+
+        function showHome() {
+            isQuizActive = false;
+            updateHomePage();
+            showContent('home');
+        }
+
+        function generateWordCards() {
+            const container = document.querySelector('.word-cards-container');
+            container.innerHTML = '';
+            wordData.forEach(item => { container.innerHTML += `<div class="word-card"><div class="card-inner"><div class="card-face card-front">${item.word}</div><div class="card-face card-back">${item.meaning}</div></div></div>`; });
+            document.querySelectorAll('.word-card').forEach(card => card.addEventListener('click', () => card.classList.toggle('flipped')));
+        }
+        
+        function generateWordListTable() {
+            const tbody = document.querySelector('#word-list-table tbody');
+            tbody.innerHTML = '';
+            wordData.forEach(item => { tbody.innerHTML += `<tr><td>${item.word}</td><td>${item.usage}</td><td>${item.meaning}</td></tr>`; });
+        }
+
+        function toggleWordbookView(showCards) {
+            document.getElementById('card-view').classList.toggle('active', showCards);
+            cardViewBtn.classList.toggle('active', showCards);
+            document.getElementById('list-view').classList.toggle('active', !showCards);
+            listViewBtn.classList.toggle('active', !showCards);
+        }
+
+        function startQuiz(sourceData) {
+            isQuizActive = true;
+            document.getElementById('quiz-container').innerHTML = '';
+            const num = isPracticeMode ? sourceData.length : parseInt(numQuestionsInput.value, 10);
+            const isBalanceMode = document.getElementById('balance-mode-toggle').checked;
+
+            if (isBalanceMode && !isPracticeMode) {
+                const toDoWords = wordData.filter(w => w.usage === 'to do').sort(() => 0.5 - Math.random());
+                const ingWords = wordData.filter(w => w.usage === '~ing').sort(() => 0.5 - Math.random());
+                const numToDo = Math.ceil(num / 2);
+                const numIng = num - numToDo;
+                currentQuiz = [...toDoWords.slice(0, numToDo), ...ingWords.slice(0, numIng)].sort(() => 0.5 - Math.random());
+            } else {
+                currentQuiz = [...sourceData].sort(() => 0.5 - Math.random()).slice(0, num);
+            }
+            
+            currentQuestionIndex = 0;
+            incorrectQuestions = [];
+            showContent('quiz-area');
+            drawNewQuestion();
+        }
+
+        function startReviewQuizFromHome() {
+            if (savedMistakes.length === 0) return;
+            isPracticeMode = true;
+            startQuiz(savedMistakes);
+        }
+        
+        function startMistakeQuiz() {
+            if (incorrectQuestions.length === 0) return;
+            isPracticeMode = true;
+            const uniqueMistakes = [...new Set(incorrectQuestions.map(JSON.stringify))].map(JSON.parse);
+            startQuiz(uniqueMistakes);
+        }
+
+        function drawNewQuestion() {
+            if (!isQuizActive) return;
+            if (currentQuestionIndex >= currentQuiz.length) {
+                showQuizResult();
+                return;
+            }
+            const questionData = currentQuiz[currentQuestionIndex];
+            const container = document.getElementById('quiz-container');
+            container.innerHTML = `<div class="question-area"><div id="question-word">${questionData.word}</div><div class="answer-buttons"><button class="answer-button" onclick="checkAnswer('to do', this)">to do</button><button class="answer-button" onclick="checkAnswer('~ing', this)">~ing</button></div><div id="explanation"></div></div>`;
+        }
+
+        function checkAnswer(selectedUsage, clickedButton) {
+            if (!isQuizActive) return;
+            clearTimeout(answerTimer);
+            const questionData = currentQuiz[currentQuestionIndex];
+            const correctAnswer = questionData.usage;
+            const buttons = document.querySelectorAll('.answer-button');
+            const explanationEl = document.getElementById('explanation');
+
+            buttons.forEach(btn => btn.disabled = true);
+
+            if (selectedUsage === correctAnswer) {
+                clickedButton.classList.add('correct-answer');
+                explanationEl.innerHTML = `<b>正解！</b> ${questionData.explanation}`;
+                explanationEl.className = 'correct';
+                if (isPracticeMode) {
+                    savedMistakes = savedMistakes.filter(item => item.id !== questionData.id);
+                    saveMistakes();
+                }
+            } else {
+                clickedButton.classList.add('wrong-answer');
+                incorrectQuestions.push(questionData);
+                buttons.forEach(btn => { if (btn.textContent === correctAnswer) btn.classList.add('correct-answer'); });
+                explanationEl.innerHTML = `<b>不正解...</b> 正しくは <b>${correctAnswer}</b>。<br>${questionData.explanation}`;
+                explanationEl.className = 'incorrect';
+                if (!savedMistakes.some(item => item.id === questionData.id)) {
+                    savedMistakes.push(questionData);
+                    saveMistakes();
+                }
+            }
+            
+            explanationEl.classList.add('show');
+            currentQuestionIndex++;
+            answerTimer = setTimeout(drawNewQuestion, NEXT_QUESTION_DELAY + 1500);
+        }
+
+        function showQuizResult() {
+            isQuizActive = false;
+            const score = currentQuiz.length - incorrectQuestions.length;
+            document.getElementById('final-score').textContent = `正解数: ${score} / ${currentQuiz.length}`;
+            const mistakesList = document.getElementById('mistakes-list');
+            const mistakesUl = document.getElementById('mistakes');
+            const mistakeQuizBtn = document.getElementById('start-mistake-quiz-btn');
+            const uniqueMistakes = [...new Set(incorrectQuestions.map(JSON.stringify))].map(JSON.parse);
+
+            if (uniqueMistakes.length > 0) {
+                mistakesUl.innerHTML = '';
+                uniqueMistakes.forEach(item => { mistakesUl.innerHTML += `<li>${item.word} (正解: ${item.usage})</li>`; });
+                mistakesList.style.display = 'block';
+                mistakeQuizBtn.style.display = 'inline-block';
+            } else {
+                mistakesList.style.display = 'none';
+                mistakeQuizBtn.style.display = 'none';
+            }
+            document.getElementById('result-title').textContent = (score === currentQuiz.length) ? "全問正解！おめでとうございます！" : "テスト完了！";
+            showContent('quiz-finished');
+        }
+    </script>
+</body>
+</html>
