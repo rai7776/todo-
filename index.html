@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>英単語学習アプリ v4.4</title>
+    <title>英単語学習アプリ v4.5</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap');
 
@@ -85,7 +85,6 @@
         #reset-button:hover { background-color: #c82333; transform: translateY(-2px); }
         #reset-button:active { transform: scale(0.9); }
 
-        /* 中略: 他のスタイルは変更なし... */
         h1, h2, h3 { text-align: center; }
         h1 { color: var(--dark-color); margin: 10px 0 20px; }
         h2 { color: var(--primary-color); margin-bottom: 20px; }
@@ -154,54 +153,14 @@
         .result-buttons button:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         #start-mistake-quiz-btn { background-color: var(--danger-color); }
 
-        /* 爆発エフェクト & モーダル */
-        .particle {
-            position: absolute;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 1000;
-        }
-        @keyframes shake-hard {
-            10%, 90% { transform: translate3d(-1px, 0, 0); }
-            20%, 80% { transform: translate3d(2px, 0, 0); }
-            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-            40%, 60% { transform: translate3d(4px, 0, 0); }
-        }
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
+        @keyframes shake-hard { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: none; align-items: center; justify-content: center; z-index: 2000; opacity: 0; transition: opacity 0.3s ease; }
         .modal-overlay.show { display: flex; opacity: 1; }
-        .modal-content {
-            background: white;
-            padding: 30px 40px;
-            border-radius: 10px;
-            text-align: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            transform: scale(0.7);
-            transition: transform 0.3s ease;
-        }
+        .modal-content { background: white; padding: 30px 40px; border-radius: 10px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transform: scale(0.7); transition: transform 0.3s ease; }
         .modal-overlay.show .modal-content { transform: scale(1); }
         .modal-content p { font-size: 1.2em; margin: 0 0 20px; font-weight: bold; }
-        .modal-content button {
-            padding: 10px 30px;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1em;
-        }
+        .modal-content button { padding: 10px 30px; background-color: var(--primary-color); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        .particle { position: absolute; border-radius: 50%; pointer-events: none; z-index: 1000; }
     </style>
 </head>
 <body>
@@ -220,6 +179,7 @@
                     <button class="answer-button" id="start-review-quiz-btn" onclick="startReviewQuizFromHome()">復習テストを開始</button>
                 </div>
             </div>
+
             <div id="wordbook" class="content">
                  <h2>単語帳</h2>
                 <div class="view-toggle">
@@ -236,6 +196,7 @@
                     </table>
                 </div>
             </div>
+
             <div id="quiz-settings" class="content">
                 <h2>テスト設定</h2>
                 <div id="quiz-settings-form">
@@ -256,9 +217,11 @@
                     </div>
                 </div>
             </div>
+
             <div id="quiz-area" class="content">
                 <div id="quiz-container"></div>
             </div>
+
             <div id="quiz-finished" class="content">
                 <h2 id="result-title">テスト完了！</h2>
                 <p id="final-score"></p>
@@ -282,7 +245,6 @@
     </div>
 
     <script>
-        // wordData と大半のJSは変更なし...
         const wordData = [
             { id: 1, word: 'agree', usage: 'to do', meaning: '同意する', explanation: '「これから～すること」に同意するという未来志向の動詞です。' },
             { id: 2, word: 'decide', usage: 'to do', meaning: '決心する', explanation: '「これから～する」と未来の行動を決めるため、to不定詞をとります。' },
@@ -312,6 +274,7 @@
         let currentQuiz = [], currentQuestionIndex = 0, incorrectQuestions = [], savedMistakes = [];
         let isQuizActive = false, isPracticeMode = false;
         let answerTimer;
+        const NEXT_QUESTION_DELAY = 1000;
 
         const allContent = document.querySelectorAll('.content');
         const startQuizButton = document.getElementById('start-quiz-button');
@@ -323,16 +286,13 @@
         const unsupportedModal = document.getElementById('unsupported-modal');
         const closeModalBtn = document.getElementById('close-modal-btn');
 
-
         window.onload = () => {
-            // イベントリスナー設定
             startQuizButton.addEventListener('click', () => { isPracticeMode = false; startQuiz(wordData); });
             cardViewBtn.addEventListener('click', () => toggleWordbookView(true));
             listViewBtn.addEventListener('click', () => toggleWordbookView(false));
             resetButton.addEventListener('click', triggerExplosionEffect);
             closeModalBtn.addEventListener('click', () => unsupportedModal.classList.remove('show'));
             
-            // 初期化処理
             loadMistakes();
             updateHomePage();
             generateWordCards();
@@ -340,17 +300,26 @@
             showHome();
         };
         
-        // ★★リセットボタンの新機能★★
+        // ★★バグ修正：localStorageのデータが破損していてもエラーにならないように修正★★
+        function loadMistakes() {
+            try {
+                const data = localStorage.getItem('savedMistakes_v4.5');
+                savedMistakes = data ? JSON.parse(data) : [];
+                if (!Array.isArray(savedMistakes)) {
+                    savedMistakes = [];
+                }
+            } catch (e) {
+                console.error("Failed to load mistakes:", e);
+                savedMistakes = [];
+            }
+        }
+        function saveMistakes() { localStorage.setItem('savedMistakes_v4.5', JSON.stringify(savedMistakes)); }
+        
         function triggerExplosionEffect() {
             const button = resetButton;
             const rect = button.getBoundingClientRect();
-            
             document.body.classList.add('explosion');
-            
-            for (let i = 0; i < 50; i++) {
-                createParticle(rect.left + rect.width / 2, rect.top + rect.height / 2);
-            }
-
+            for (let i = 0; i < 50; i++) { createParticle(rect.left + rect.width / 2, rect.top + rect.height / 2); }
             setTimeout(() => {
                 document.body.classList.remove('explosion');
                 unsupportedModal.classList.add('show');
@@ -361,34 +330,17 @@
             const particle = document.createElement('div');
             particle.className = 'particle';
             document.body.appendChild(particle);
-
             const size = Math.floor(Math.random() * 15 + 5);
             particle.style.width = `${size}px`;
             particle.style.height = `${size}px`;
             particle.style.background = `hsl(${Math.random() * 60}, 100%, 50%)`;
-            
             const destinationX = x + (Math.random() - 0.5) * 2 * (window.innerWidth / 3);
             const destinationY = y + (Math.random() - 0.5) * 2 * (window.innerHeight / 3);
-
             particle.style.left = `${x - size / 2}px`;
             particle.style.top = `${y - size / 2}px`;
-
-            const animation = particle.animate([
-                { transform: 'translate(0, 0)', opacity: 1 },
-                { transform: `translate(${destinationX - x}px, ${destinationY - y}px)`, opacity: 0 }
-            ], {
-                duration: Math.random() * 1000 + 800,
-                easing: 'cubic-bezier(0, .9, .57, 1)',
-            });
-            
-            animation.onfinish = () => {
-                particle.remove();
-            };
+            const animation = particle.animate([{ transform: 'translate(0, 0)', opacity: 1 }, { transform: `translate(${destinationX - x}px, ${destinationY - y}px)`, opacity: 0 }], { duration: Math.random() * 1000 + 800, easing: 'cubic-bezier(0, .9, .57, 1)' });
+            animation.onfinish = () => { particle.remove(); };
         }
-
-
-        function loadMistakes() { savedMistakes = JSON.parse(localStorage.getItem('savedMistakes_v4.4')) || []; }
-        function saveMistakes() { localStorage.setItem('savedMistakes_v4.4', JSON.stringify(savedMistakes)); }
         
         function updateHomePage() {
             reviewBtnHome.disabled = savedMistakes.length === 0;
@@ -505,7 +457,7 @@
             
             explanationEl.classList.add('show');
             currentQuestionIndex++;
-            answerTimer = setTimeout(drawNewQuestion, NEXT_QUESTION_DELAY + 1500);
+            answerTimer = setTimeout(drawNewQuestion, NEXT_QUESTION_DELAY + 1000); // 待ち時間を2秒に調整
         }
 
         function showQuizResult() {
